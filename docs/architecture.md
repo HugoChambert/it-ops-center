@@ -1,0 +1,39 @@
+# Architecture (Phase 1)
+- **Frontend:** React SPA. `Layout` (sidebar + header) wraps routed pages. Pages fetch through `src/api.js`.
+- **Backend:** `createApp(db)` builds the Express app from an injected database, so tests use `:memory:` SQLite.
+- **Database:** tables `systems` and `incidents` (`server/db.js`). Statuses and priorities are enforced by CHECK constraints.
+- **Dashboard statistics** are computed on request in `server/services/stats.js`, deliberately separate from incident routes. Incident state lives in the `incidents` table; the dashboard derives its numbers from it.
+- **API:** `GET /api/dashboard`, `/api/incidents?status&priority&q`, `/api/systems`, `/api/health`. Errors return JSON `{ error }`.
+- **Data flow:** browser → Vite proxy → Express → SQLite → JSON → React state.
+
+## Phase 2: incidents
+- `server/services/incidents.js` holds validation and state changes; routes in `app.js` are thin.
+- `incident_events` stores the timeline (types: status, note, action). Resolving requires a resolution and sets `resolved_at`.
+- API: `POST /api/incidents`, `GET|PATCH /api/incidents/:id`, `POST /api/incidents/:id/notes`, `POST /api/incidents/:id/actions`.
+- Validation errors return `{ error }` with 400; unknown ids return 404.
+
+## Phase 3: systems
+- `GET /api/systems` returns each system with `open_incidents` (Open, Investigating or Pending incidents linked to it).
+- The Systems page shows status, CPU, memory and disk utilisation, uptime and last check. Utilisation of 75% or more is flagged as high, 90% or more as critical, with text as well as colour.
+
+## Phase 4: knowledge base
+- Tables `articles` and `article_incidents` (many-to-many link to incidents). Logic in `server/services/articles.js`.
+- API: `GET /api/articles?q=`, `GET /api/articles/:id` (includes `related_incidents`), `POST /api/articles` (optional `incident_id`).
+- Create-from-incident: the form at `/knowledge/new?incident=ID` prefills from the incident (description, recorded actions, resolution); the technician edits before saving.
+
+## Phase 5: AI troubleshooting
+- `server/ai/index.js` chooses a provider from `AI_PROVIDER` (default `mock`). A provider is an object with `troubleshoot(incident)` returning `{ possibleCause, investigation[], commands[{label,command}], disclaimer, confidence, articleQuery }`.
+- `mockProvider.js` is rule-based (keyword match on title and description) so the app works offline with no key. To add a real provider, implement the same interface in a new file, register it in `getProvider`, and read `AI_API_KEY` from the environment.
+- `POST /api/incidents/:id/troubleshoot` calls the provider and adds related knowledge articles. It changes no data. An unimplemented provider returns 501 with a clear message.
+- Suggestions are always labelled as recommendations, not a confirmed diagnosis. The UI can record a suggested step as a troubleshooting action.
+
+## Phase 6: incident reports
+- Table `incident_reports` (one per incident, keyed by `incident_id`, saved with an upsert). Logic in `server/services/reports.js`.
+- Providers gained `draftReport(incident)`. The mock builds the draft from recorded facts only (description, system, user, actions, resolution) and leaves root cause and preventative action for the technician. A real provider can write these sections.
+- API: `POST /api/incidents/:id/report/draft` (generates, saves nothing), `PUT /api/incidents/:id/report` (saves the edited text; `problem` required), `GET /api/incidents/:id/report` (saved report or `null`).
+- Saving adds a timeline entry.
+
+## Phase 7: settings
+- Table `settings` (key/value). Defaults and reads live in `server/services/settingsStore.js`, which has no imports from the other services so `incidents.js` can use it without a circular dependency. Validation is in `settings.js`.
+- Editable: `technician_name` (author on new timeline entries; earlier entries keep their stored author) and `default_priority` (used when a new incident has no priority).
+- `GET|PUT /api/settings` also returns read-only `ai.provider`, `ai.keyConfigured` (boolean only; the key is never returned) and the app version. Provider and key are changed in `.env`, then restart.
