@@ -56,7 +56,7 @@ export function updateIncident(db, id, body = {}) {
     if (!STATUSES.includes(body.status)) throw new HttpError(400, `Status must be one of: ${STATUSES.join(', ')}`);
     if (body.status === 'Resolved' && !next.resolution) throw new HttpError(400, 'A resolution is required to resolve an incident');
     next.status = body.status;
-    if (DONE.includes(next.status)) next.resolved_at = cur.resolved_at || now();
+    if (next.status === 'Closed') next.resolved_at = cur.resolved_at || now();
     else next.resolved_at = null; // reopened
   }
   db.prepare('UPDATE incidents SET priority=?, assignee=?, status=?, resolution=?, resolved_at=?, updated_at=? WHERE id=?')
