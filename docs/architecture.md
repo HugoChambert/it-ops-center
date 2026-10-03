@@ -37,3 +37,23 @@
 - Table `settings` (key/value). Defaults and reads live in `server/services/settingsStore.js`, which has no imports from the other services so `incidents.js` can use it without a circular dependency. Validation is in `settings.js`.
 - Editable: `technician_name` (author on new timeline entries; earlier entries keep their stored author) and `default_priority` (used when a new incident has no priority).
 - `GET|PUT /api/settings` also returns read-only `ai.provider`, `ai.keyConfigured` (boolean only; the key is never returned) and the app version. Provider and key are changed in `.env`, then restart.
+
+## Phase 8: SLA deadlines
+- Deadline windows live in `server/config/sla.js` (`SLA_WINDOWS_MS`, `SLA_TARGETS`). Changing a value there propagates everywhere automatically — service, dashboard counter, and UI chip.
+- `server/services/sla.js` exports two pure functions: `getDeadline(incident)` → `Date|null` and `getSlaStatus(incident, now?)` → `{ deadline, msRemaining, overdue, label, target }|null`. `now` is injectable for deterministic tests.
+- The `sla` object is **computed at request time, never stored**. Deadline = `created_at + window[current priority]`. Changing priority shifts the deadline immediately; upgrading an old incident to Critical surfaces it as overdue straight away.
+- `listIncidents` and `getIncident` map the `sla` field onto every row in a single pass (no extra DB query per row). Resolved/Closed incidents return `sla: null`.
+- `getDashboardStats` filters active incident rows in JS using `getSlaStatus` and exposes `overdueIncidents`.
+- Frontend: `SlaChip` renders the label text + accessible `title` attribute. Status is always text, not colour alone. Incidents list has a mobile card layout (below `md`) and a table layout (`md` and up), both showing the chip. Incident detail shows the chip in the metadata section alongside `sla.target`. Dashboard has a sixth **Overdue** stat tile in a `grid-cols-2 sm:grid-cols-3 lg:grid-cols-6` grid.
+- Seed data (non-persistent `:memory:` tests + the live DB at first run): INC-1 Critical 30 h old → overdue; INC-2 High 20 h old → overdue; INC-3 Medium 6 h old → ~2 h remaining; INC-4/5/6 resolved/closed → `sla: null`.
+
+## Phase 9: Deployment
+
+- **Static serving:** `createApp` accepts an optional `staticDir` option (default `null`). When set, Express serves that directory and falls back to `index.html` for every non-`/api` path, enabling React Router deep-links to work on refresh in production. Tests pass `staticDir = null` so they remain independent of a build artefact.
+- **`npm start`:** sets `NODE_ENV=production`; `server/index.js` resolves `dist/` relative to the server file and passes it as `staticDir`. Dev mode (`npm run dev`) leaves `staticDir = null`.
+- **`engines`:** `package.json` declares `"node": ">=22.5"` to document the `node:sqlite` requirement.
+- **`Dockerfile`:** `node:22-alpine`, `npm ci`, `npm run build`, `EXPOSE 3000`, `CMD ["node","server/index.js"]`.
+- **`.dockerignore`:** excludes `node_modules`, `dist`, `data`, `.env`, `.git`.
+- **`DEMO_RESET_HOURS`:** when set to a positive number, a `setInterval` in `server/index.js` deletes all rows from every table (in dependency order) and calls `seed(db)` on the given interval. When unset, nothing changes.
+- **`VITE_DEMO_BANNER`:** a build-time Vite env variable. When `"true"`, `Layout.jsx` renders an amber banner above the header: "Demo environment: data resets periodically". Absent or any other value → no banner, zero runtime cost.
+- **Tests:** `tests/deploy.test.js` — static file served (200), SPA fallback for unknown non-`/api` path (200 + `index.html`), JSON 404 preserved for unknown `/api` routes, no fallback without `staticDir`; three reset-logic tests exercising the wipe-then-reseed sequence against an in-memory db.

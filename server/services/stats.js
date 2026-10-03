@@ -1,14 +1,23 @@
 // Dashboard statistics are computed here, from the incidents table only.
 // Kept separate from the incident routes so the two can be reasoned about independently.
+import { getSlaStatus } from './sla.js';
+
 export function getDashboardStats(db) {
   const count = (where, ...args) => db.prepare(`SELECT COUNT(*) c FROM incidents WHERE ${where}`).get(...args).c;
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
   const systems = db.prepare('SELECT status FROM systems').all();
   const up = systems.filter((s) => s.status !== 'Down').length;
+
+  // Count overdue: active incidents whose SLA deadline has passed.
+  // Computed in JS (not SQL) so the deadline config stays in one place.
+  const activeRows = db.prepare("SELECT id, priority, status, created_at FROM incidents WHERE status IN ('Open','Investigating','Pending')").all();
+  const overdueIncidents = activeRows.filter((r) => getSlaStatus(r)?.overdue).length;
+
   return {
     openIncidents: count("status IN ('Open','Investigating','Pending')"),
     criticalIncidents: count("priority = 'Critical' AND status IN ('Open','Investigating','Pending')"),
     resolvedToday: count("status IN ('Resolved','Closed') AND resolved_at >= ?", startOfDay.toISOString()),
+    overdueIncidents,
     systemsMonitored: systems.length,
     uptimePercent: systems.length ? Number(((up / systems.length) * 100).toFixed(2)) : 100,
     recentIncidents: db.prepare(`SELECT i.id,i.title,i.priority,i.status,i.updated_at,s.name AS system

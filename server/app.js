@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'node:path';
 import { getDashboardStats } from './services/stats.js';
 import * as inc from './services/incidents.js';
 import * as kb from './services/articles.js';
@@ -6,7 +7,7 @@ import * as settings from './services/settings.js';
 import * as reports from './services/reports.js';
 import { getProvider } from './ai/index.js';
 
-export function createApp(db, { ai = getProvider() } = {}) {
+export function createApp(db, { ai = getProvider(), staticDir = null } = {}) {
   const app = express();
   app.use(express.json());
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
@@ -49,6 +50,12 @@ export function createApp(db, { ai = getProvider() } = {}) {
   app.get('/api/articles/:id', (req, res) => res.json(kb.getArticle(db, Number(req.params.id))));
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
+  if (staticDir) {
+    app.use(express.static(staticDir));
+    app.get('*', (_req, res) => res.sendFile(path.join(staticDir, 'index.html')));
+  }
+
   app.use((err, _req, res, _next) => {
     if (err.expose) return res.status(err.status || 400).json({ error: err.message });
     console.error(err);

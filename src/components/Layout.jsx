@@ -18,6 +18,11 @@ export default function Layout() {
         </nav>
       </aside>
       <div className="flex-1 min-w-0">
+        {import.meta.env.VITE_DEMO_BANNER === 'true' && (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-1.5 text-center text-xs text-amber-800">
+            Demo environment: data resets periodically
+          </div>
+        )}
         <header className="flex items-center justify-between border-b border-line bg-white px-6 py-3">
           <span className="text-sm text-slate-600">Service desk · Production</span>
           <span className="text-sm font-medium">{name}</span>

@@ -13,6 +13,11 @@ describe('GET /api/dashboard', () => {
     expect(body.criticalIncidents).toBe(1);
     expect(body.systemsMonitored).toBe(6);
   });
+  it('includes overdueIncidents as a non-negative integer', async () => {
+    const { body } = await request(app).get('/api/dashboard').expect(200);
+    expect(typeof body.overdueIncidents).toBe('number');
+    expect(body.overdueIncidents).toBeGreaterThanOrEqual(0);
+  });
   it('returns a 7-day trend', async () => {
     const { body } = await request(app).get('/api/dashboard');
     expect(body.trend).toHaveLength(7);

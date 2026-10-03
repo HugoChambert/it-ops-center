@@ -32,9 +32,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Operations dashboard</h1>
-      <section aria-label="Key figures" className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <section aria-label="Key figures" className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Open incidents" value={s.openIncidents} />
         <Stat label="Critical" value={s.criticalIncidents} tone="text-crit" />
+        <Stat label="Overdue" value={s.overdueIncidents} tone="text-crit" />
         <Stat label="Resolved today" value={s.resolvedToday} tone="text-ok" />
         <Stat label="Systems monitored" value={s.systemsMonitored} />
         <Stat label="Uptime" value={`${s.uptimePercent}%`} />

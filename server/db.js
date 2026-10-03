@@ -61,9 +61,14 @@ export function seed(db) {
     .forEach((s) => sys.run(...s, ago(0.1)));
   const inc = db.prepare(`INSERT INTO incidents (title,description,priority,status,assignee,affected_user,system_id,created_at,updated_at,resolved_at)
     VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  // SLA windows: Critical 1h, High 4h, Medium 8h, Low 24h.
+  // INC-1 (Critical):  created 30h ago → overdue by ~29h
+  // INC-2 (High):      created 20h ago → overdue by ~16h
+  // INC-3 (Medium):    created  6h ago → within 8h window (~2h remaining)
+  // INC-4..6 resolved/closed: sla = null
   [['Unable to connect to corporate VPN','Users report authentication failures.','Critical','Investigating','Hugo Chambert','J. Alvarez',6,30,2,null],
    ['Database replication lag','Replica is minutes behind primary.','High','Open','Sam Okafor','Finance team',3,20,5,null],
-   ['Shared drive slow to open','File listing takes over 30 seconds.','Medium','Pending','Hugo Chambert','M. Chen',4,50,10,null],
+   ['Shared drive slow to open','File listing takes over 30 seconds.','Medium','Pending','Hugo Chambert','M. Chen',4,6,1,null],
    ['Mailbox quota exceeded','User cannot send mail.','Low','Resolved','Sam Okafor','T. Brooks',5,26,1,1],
    ['Web certificate expiring','Certificate expires in 7 days.','High','Resolved','Dana Wu',null,1,40,3,3],
    ['Password reset loop','Reset link returns to login.','Medium','Closed','Dana Wu','R. Patel',2,90,60,60]]

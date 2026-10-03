@@ -11,11 +11,57 @@ Requires Node 22.5+.
 
 ## Structure
 - `server/db.js` schema and seed data · `server/app.js` routes · `server/services/stats.js` dashboard statistics
-- `src/` React app: `pages/`, `components/`, `api.js`
+- `server/config/sla.js` SLA deadline windows · `server/services/sla.js` deadline/label computation
+- `src/` React app: `pages/`, `components/` (includes `SlaChip`), `api.js`
 - `tests/` API tests · `docs/architecture.md`
 
 ## Environment (`.env.example`)
-`PORT`, `DATABASE_PATH`, `AI_PROVIDER`, `AI_API_KEY` (reserved for the AI phase).
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `3001` | Express listen port |
+| `DATABASE_PATH` | `./data/itops.db` | SQLite file path |
+| `AI_PROVIDER` | `mock` | AI provider name |
+| `AI_API_KEY` | — | Key for real providers; never returned by API |
+| `DEMO_RESET_HOURS` | _(unset)_ | When set, wipes and reseeds data on that interval |
+| `VITE_DEMO_BANNER` | _(unset)_ | Build-time flag; set to `true` to show the demo banner |
+
+## Deployment
+
+### Docker
+
+```bash
+# build
+docker build -t it-ops-center .
+
+# run (data persisted in a named volume)
+docker run -p 3000:3000 \
+  -v it-ops-data:/app/data \
+  -e PORT=3000 \
+  it-ops-center
+```
+
+The `npm start` script sets `NODE_ENV=production`; Express then serves the built frontend from `dist/` and falls back to `index.html` for any non-`/api` path (React Router deep-links work on refresh).
+
+### Render
+
+1. Connect the repository in the Render dashboard.
+2. Choose **Web Service** → **Docker** (uses the `Dockerfile` in the repo root).
+3. Set the **Port** to `3000` (or your `PORT` env var value).
+4. Add a **Disk** (mount path `/app/data`, e.g. 1 GB) so the SQLite database survives deploys.
+5. Optional env vars: `DEMO_RESET_HOURS`, and at build time `VITE_DEMO_BANNER=true` for the demo banner.
+6. Click **Deploy**. First deploy runs `npm ci && npm run build` then `node server/index.js`.
+
+## SLA
+Each open incident has a response deadline based on priority: **Critical 1 h · High 4 h · Medium 8 h · Low 24 h**.
+
+The deadline is computed from `created_at + current priority window` at request time (not stored). Every incident API response includes an `sla` field:
+
+```json
+{ "deadline": "…ISO…", "msRemaining": -3900000, "overdue": true,
+  "label": "Overdue by 1h 5m", "target": "Target: 1 hour" }
+```
+
+Resolved and Closed incidents return `"sla": null`. The dashboard exposes `overdueIncidents`. Changing priority shifts the deadline immediately — intentional, so a Critical re-triage surfaces overdue status straight away.
 
 ## Status
-Phase 1: shell and dashboard. Phase 2: incident create/view/search/filter/assign/prioritise/resolve, notes, troubleshooting actions, timeline. Phase 3: systems page. Phase 4: knowledge base. Phase 5: AI troubleshooting panel (mock provider). Phase 6: incident reports (editable draft, then save). Phase 7: settings. All features in the original brief are built. The seeded dashboard bug has intentionally not been introduced.
+Phase 1: shell and dashboard. Phase 2: incident create/view/search/filter/assign/prioritise/resolve, notes, troubleshooting actions, timeline. Phase 3: systems page. Phase 4: knowledge base. Phase 5: AI troubleshooting panel (mock provider). Phase 6: incident reports (editable draft, then save). Phase 7: settings. Phase 8: SLA deadlines and overdue tracking. All features in the original brief are built.

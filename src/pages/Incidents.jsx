@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, STATUSES, PRIORITIES } from '../api.js';
 import StatusBadge from '../components/StatusBadge.jsx';
+import SlaChip from '../components/SlaChip.jsx';
 import Field, { inputCls } from '../components/Field.jsx';
 
 function NewIncident({ systems, onCancel }) {
@@ -54,12 +55,59 @@ export default function Incidents() {
         <select aria-label="Filter by priority" className={`${inputCls} sm:w-44`} value={priority} onChange={(e) => setPriority(e.target.value)}><option value="">All priorities</option>{PRIORITIES.map((s) => <option key={s}>{s}</option>)}</select>
       </div>
       {err && <p role="alert" className="text-crit">Could not load incidents: {err}</p>}
-      {rows && <div className="overflow-x-auto rounded-lg border border-line bg-white"><table className="w-full text-left text-sm">
-        <thead className="text-slate-600"><tr><th className="p-3">ID</th><th>Title</th><th>System</th><th>Assigned</th><th>Priority</th><th>Status</th></tr></thead>
-        <tbody>{rows.map((i) => (<tr key={i.id} className="border-t border-line">
-          <td className="p-3">INC-{i.id}</td><td><Link className="text-brand underline" to={`/incidents/${i.id}`}>{i.title}</Link></td>
-          <td>{i.system || '—'}</td><td>{i.assignee || 'Unassigned'}</td><td><StatusBadge value={i.priority} /></td><td><StatusBadge value={i.status} /></td></tr>))}</tbody>
-      </table>{rows.length === 0 && <p className="p-4 text-sm text-slate-600">No incidents match these filters. Clear a filter or create a new incident.</p>}</div>}
+      {rows && (
+        <>
+          {/* Mobile card list — visible below md */}
+          <ul className="md:hidden space-y-2">
+            {rows.length === 0 && <p className="text-sm text-slate-600">No incidents match these filters. Clear a filter or create a new incident.</p>}
+            {rows.map((i) => (
+              <li key={i.id} className="rounded-lg border border-line bg-white p-3 text-sm space-y-1">
+                <div className="font-medium">
+                  <Link className="text-brand underline" to={`/incidents/${i.id}`}>INC-{i.id}: {i.title}</Link>
+                </div>
+                <div className="text-slate-600">{i.system || 'No system'} · {i.assignee || 'Unassigned'}</div>
+                <div className="flex flex-wrap gap-1 items-center">
+                  <StatusBadge value={i.priority} />
+                  <StatusBadge value={i.status} />
+                  {i.sla && <SlaChip sla={i.sla} />}
+                  {!i.sla && <span className="text-xs text-slate-500">{i.status}</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* Table — visible from md up */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border border-line bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="text-slate-600">
+                <tr>
+                  <th className="p-3">ID</th>
+                  <th>Title</th>
+                  <th>System</th>
+                  <th>Assigned</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>SLA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((i) => (
+                  <tr key={i.id} className="border-t border-line">
+                    <td className="p-3">INC-{i.id}</td>
+                    <td><Link className="text-brand underline" to={`/incidents/${i.id}`}>{i.title}</Link></td>
+                    <td>{i.system || '—'}</td>
+                    <td>{i.assignee || 'Unassigned'}</td>
+                    <td><StatusBadge value={i.priority} /></td>
+                    <td><StatusBadge value={i.status} /></td>
+                    <td>{i.sla ? <SlaChip sla={i.sla} /> : <span className="text-slate-400">—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length === 0 && <p className="p-4 text-sm text-slate-600">No incidents match these filters. Clear a filter or create a new incident.</p>}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge.jsx';
 import AiPanel from '../components/AiPanel.jsx';
 import ReportPanel from '../components/ReportPanel.jsx';
 import Field, { inputCls } from '../components/Field.jsx';
+import SlaChip from '../components/SlaChip.jsx';
 
 const fmt = (d) => new Date(d).toLocaleString();
 
@@ -45,6 +46,14 @@ export default function IncidentDetail() {
           <div><dt className="text-slate-600">Affected user</dt><dd>{i.affected_user || '—'}</dd></div>
           <div><dt className="text-slate-600">Created</dt><dd>{fmt(i.created_at)}</dd></div>
           <div><dt className="text-slate-600">Updated</dt><dd>{fmt(i.updated_at)}</dd></div>
+          <div>
+            <dt className="text-slate-600">SLA</dt>
+            <dd className="mt-0.5">
+              {i.sla
+                ? <><SlaChip sla={i.sla} /><span className="ml-1 text-xs text-slate-500">{i.sla.target}</span></>
+                : <span className="text-slate-400">—</span>}
+            </dd>
+          </div>
         </dl>
         {i.description && <p className="text-sm sm:col-span-3">{i.description}</p>}
       </section>

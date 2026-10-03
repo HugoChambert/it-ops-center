@@ -21,6 +21,26 @@ describe('incident creation', () => {
   });
 });
 
+describe('sla field on incident responses', () => {
+  it('list endpoint returns sla object on active incidents', async () => {
+    const { body } = await request(app).get('/api/incidents').expect(200);
+    const active = body.filter((i) => !['Resolved', 'Closed'].includes(i.status));
+    for (const i of active) {
+      expect(i.sla).not.toBeNull();
+      expect(i.sla).toHaveProperty('deadline');
+      expect(i.sla).toHaveProperty('overdue');
+      expect(i.sla).toHaveProperty('label');
+      expect(i.sla).toHaveProperty('target');
+    }
+  });
+  it('detail endpoint returns sla = null after resolving', async () => {
+    const { body: i } = await create({ priority: 'Critical' });
+    await request(app).patch(`/api/incidents/${i.id}`).send({ status: 'Resolved', resolution: 'Fixed' }).expect(200);
+    const { body } = await request(app).get(`/api/incidents/${i.id}`).expect(200);
+    expect(body.sla).toBeNull();
+  });
+});
+
 describe('status changes', () => {
   it('records the change on the timeline', async () => {
     const { body: i } = await create();

@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": { "node": ">=22.5" },
   "scripts": {
     "dev": "concurrently -n api,web -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --watch server/index.js",
     "dev:client": "vite",
     "build": "vite build",
+    "start": "NODE_ENV=production node server/index.js",
     "test": "vitest run"
   },
   "dependencies": { "express": "^4.21.0", "react": "^18.3.1", "react-dom": "^18.3.1", "react-router-dom": "^6.26.0" },

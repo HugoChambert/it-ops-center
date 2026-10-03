@@ -1,4 +1,5 @@
 import { getSetting } from './settingsStore.js';
+import { getSlaStatus } from './sla.js';
 export const STATUSES = ['Open', 'Investigating', 'Pending', 'Resolved', 'Closed'];
 export const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const DONE = ['Resolved', 'Closed'];
@@ -14,14 +15,16 @@ export function listIncidents(db, { status, priority, q } = {}) {
   if (status) { where.push('i.status = ?'); args.push(status); }
   if (priority) { where.push('i.priority = ?'); args.push(priority); }
   if (q) { where.push('(i.title LIKE ? OR i.description LIKE ?)'); args.push(`%${q}%`, `%${q}%`); }
-  return db.prepare(`SELECT i.*, s.name AS system FROM incidents i LEFT JOIN systems s ON s.id=i.system_id
+  const rows = db.prepare(`SELECT i.*, s.name AS system FROM incidents i LEFT JOIN systems s ON s.id=i.system_id
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY i.updated_at DESC`).all(...args);
+  return rows.map((r) => ({ ...r, sla: getSlaStatus(r) }));
 }
 
 export function getIncident(db, id) {
   const row = db.prepare('SELECT i.*, s.name AS system FROM incidents i LEFT JOIN systems s ON s.id=i.system_id WHERE i.id = ?').get(id);
   if (!row) throw new HttpError(404, 'Incident not found');
   row.events = db.prepare('SELECT * FROM incident_events WHERE incident_id = ? ORDER BY created_at, id').all(id);
+  row.sla = getSlaStatus(row);
   return row;
 }
 
