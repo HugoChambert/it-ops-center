@@ -58,4 +58,24 @@ describe('dashboard consistency', () => {
     expect(after.openIncidents).toBe(before.openIncidents - 1);
     expect(after.resolvedToday).toBe(before.resolvedToday + 1);
   });
+
+  it('stamps resolved_at when status is Resolved so the dashboard counter can match it', async () => {
+    // Create a fresh incident so this test is independent of seed state.
+    const { body: i } = await create({ priority: 'Low' });
+    expect(i.resolved_at).toBeNull();
+
+    const { body: resolved } = await request(app)
+      .patch(`/api/incidents/${i.id}`)
+      .send({ status: 'Resolved', resolution: 'Fixed' })
+      .expect(200);
+
+    // resolved_at must be set to a date string — without this the stats
+    // query `resolved_at >= startOfDay` can never match and resolvedToday stays 0.
+    expect(resolved.resolved_at).toBeTruthy();
+    expect(resolved.resolved_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+    // The dashboard counter must reflect the new resolution immediately.
+    const { body: dash } = await request(app).get('/api/dashboard');
+    expect(dash.resolvedToday).toBeGreaterThanOrEqual(1);
+  });
 });
