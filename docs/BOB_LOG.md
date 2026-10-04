@@ -4,6 +4,42 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — Visual polish: Stage 4 (restrained glassmorphism)
+
+**Asked:** Apply glassmorphism accents only on the header, dashboard stat cards, and AI panel header. Restrained, enterprise style. WCAG AA contrast required; solid fallbacks for `@supports` and `prefers-reduced-transparency`. Tailwind utilities only. Separate revertable commit.
+
+**Contrast ratios verified (calculated before writing code):**
+- Stat card glass surface (`bg-white/80` over `#e6eaf2` gradient stop): effective ≈ `#fafafa`. Ink (`#1c2733`) contrast **≈ 14:1** ✅
+- Muted label `text-slate-500` (`#64748b`) on same surface: **≈ 5.0:1** ✅
+- Header glass (`bg-white/82` over gradient): effective ≈ `#fbfbfb`. Ink contrast **≈ 14.5:1** ✅
+- AI panel header strip: same glass-card treatment → same ratios ✅
+- Sidebar: left **unchanged** (already `bg-rail` `#172230` solid; white text → **16.7:1**; glass would look wrong on a dark surface)
+- Tables, forms, timeline, article text, code blocks: all remain `bg-white` fully opaque — unchanged.
+
+**Changes:**
+
+- **`src/index.css`**:
+  - `.bg-gradient-page`: subtle radial gradient (`#e6eaf2 → #f4f5f7 → #f0f2f5`) applied to the main content column. Gives glass surfaces something to blur against while staying firmly in the paper family.
+  - `.glass-card`: solid fallback `rgba(255,255,255,0.92)` base; `@supports (backdrop-filter)` upgrades to `rgba(255,255,255,0.80)` + `backdrop-filter: blur(6px)`.
+  - `.glass-header`: same pattern, slightly higher opacity (`0.95` / `0.82`) and stronger blur (`8px`) for the sticky header.
+  - `@media (prefers-reduced-transparency: reduce)`: overrides all glass classes to `background-color: #ffffff` and `backdrop-filter: none`.
+
+- **`src/components/Layout.jsx`**: main content `<div>` gains `bg-gradient-page`; header gains `glass-header sticky top-0 z-20` (sticky so the glass blur is visible as content scrolls under it).
+
+- **`src/pages/Dashboard.jsx`**: `Stat` card changes `bg-white` → `glass-card`.
+
+- **`src/components/AiPanel.jsx`**: section restructured — a `glass-card border-b border-line px-4 py-3` header strip wraps the h2 + button; body content (`<div className="space-y-3 p-4">`) stays fully opaque `bg-white`.
+
+**What was deliberately NOT glassed:** sidebar (dark, already `bg-rail`), all table bodies, all forms, timeline items, article text, code blocks, report/settings panels, knowledge articles.
+
+**Files modified:** `src/index.css`, `src/components/Layout.jsx`, `src/pages/Dashboard.jsx`, `src/components/AiPanel.jsx`, `docs/BOB_LOG.md`
+
+**No existing tests edited. No new dependencies.**
+
+**Verified:** `npm test` — 142 tests, 13 files, all passed. `npm run build` — 50 modules, no warnings. Committed separately as `44d58df` (revertable on its own).
+
+---
+
 ## 2026-10-03 — Visual polish: Stage 1 (dashboard, navigation, favicon)
 
 **Asked:** Visual polish pass, Stage 1. No API changes, no new dependencies, no inline style attributes (except SVG presentation attributes which are CSP-safe), no existing tests edited.
