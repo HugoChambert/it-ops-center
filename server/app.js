@@ -18,6 +18,24 @@ function parseId(raw) {
 
 export function createApp(db, { ai = getProvider(), staticDir = null } = {}) {
   const app = express();
+
+  // SEC-010: trust exactly one reverse proxy in production so req.ip reflects the
+  // real client address (from X-Forwarded-For) rather than the proxy's address.
+  // Without this the rate limiters treat all visitors as one IP bucket.
+  // TRUST_PROXY overrides NODE_ENV (useful for local testing or multi-hop setups).
+  // Values: '1' / '2' / ... → numeric hop count; 'loopback' / 'linklocal' / 'uniquelocal'
+  // → named subnet; '0' or 'false' → disabled; absent → use NODE_ENV default.
+  function parseTrustProxy(raw) {
+    if (raw === 'false' || raw === '0') return false;
+    const n = Number(raw);
+    if (!Number.isNaN(n)) return n;
+    return raw; // named subnet string, e.g. 'loopback'
+  }
+  const trustProxy = process.env.TRUST_PROXY !== undefined
+    ? parseTrustProxy(process.env.TRUST_PROXY)
+    : process.env.NODE_ENV === 'production' ? 1 : false;
+  app.set('trust proxy', trustProxy);
+
   app.use(securityHeaders);                    // SEC-004: security headers on every response
   app.use(express.json({ limit: '64kb' }));    // SEC-003: body-size cap
   app.use('/api', globalLimiter);             // SEC-002: global rate limit

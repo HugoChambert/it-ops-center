@@ -4,6 +4,36 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — Reverse-proxy trust, rate-limiter correctness, CSP audit (SEC-010)
+
+**Asked:** Fix a production-only problem where Express was not trusting the Render reverse proxy, causing all rate limiters to treat every visitor as the same IP. Set `trust proxy` based on `NODE_ENV`/`TRUST_PROXY`. Add tests proving per-IP bucketing with XFF headers. Audit CSP against the production build. Update docs.
+
+**Fixes applied:**
+
+- **SEC-010** — `server/app.js`: added `app.set('trust proxy', trustProxy)` before all middleware. A new inner function `parseTrustProxy` converts the `TRUST_PROXY` env var from string to the correct type: `'0'`/`'false'` → `false`, numeric string → number, anything else → string (passed directly to Express as a named subnet, e.g. `'loopback'`). When `TRUST_PROXY` is unset, defaults to `1` in production, `false` in dev. Value `1` means "trust exactly one reverse proxy hop", which prevents clients from spoofing `X-Forwarded-For` while still resolving `req.ip` correctly.
+
+**Tests added (`tests/trust-proxy.test.js` — new file, no existing tests edited):**
+
+- **Trust proxy ON** (4 tests): forwarded IP gets its own 2-request bucket; the 3rd request from the same IP returns 429; a second IP is unaffected when the first is blocked; two distinct IPs each have independent budgets.
+- **Trust proxy OFF** (2 tests): different `X-Forwarded-For` values do not create separate buckets (all map to loopback); mixed plain and forwarded requests all deplete the same single bucket.
+
+**CSP audit findings:**
+
+- **Systems page progress bars** (`style={{ width: \`${value}%\` }}`): React inline `style` props render as HTML `style` attributes, which require `style-src 'unsafe-inline'`. The existing policy already includes `"style-src 'self' 'unsafe-inline'"`. **No change needed.**
+- **Dashboard `<Trend>` SVG chart**: inline SVG rendered by React DOM directly into the HTML, not loaded as an external resource. No `img-src` or special SVG allowances required. **No change needed.**
+- **`script-src 'unsafe-inline'`** note: the Vite production build emits separate JS chunk files (not inline scripts), so `'unsafe-inline'` for scripts is more permissive than strictly necessary; however this is a tightening opportunity, not a blocking issue, and was left unchanged per the minimal-change principle.
+- **Overall verdict: the existing CSP is already sufficient for the production build. No CSP changes were made.**
+
+**Files created:** `tests/trust-proxy.test.js`
+
+**Files modified:** `server/app.js`, `README.md`, `docs/architecture.md`, `docs/security-audit.md`, `docs/BOB_LOG.md`
+
+**No existing tests edited.**
+
+**Verified:** `npm test` — 84 tests, 11 files, all passed. `npm run build` — 49 modules, no warnings, built in 0.76s.
+
+---
+
 ## 2026-10-03 — Security hardening: fix SEC-002, SEC-003, SEC-004, SEC-005, SEC-006, SEC-008
 
 **Asked:** Fix the three to five highest-severity OWASP ASVS findings from `docs/security-audit.md` that are low-risk to fix, with no new npm dependencies. Add tests for each fix. Add a "Known Limitations" section to README for SEC-001 (authentication). Do not change existing tests.

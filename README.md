@@ -27,6 +27,7 @@ Requires Node 22.5+.
 | `AI_API_KEY` | — | Key for real providers; never returned by API |
 | `DEMO_RESET_HOURS` | _(unset)_ | When set, wipes and reseeds data on that interval |
 | `VITE_DEMO_BANNER` | _(unset)_ | Build-time flag; set to `true` to show the demo banner |
+| `TRUST_PROXY` | _(unset)_ | Override Express trust proxy. `1` = one hop (Render/Docker), `loopback`, `0`/`false` = off. Defaults to `1` when `NODE_ENV=production`, `false` otherwise. |
 
 ## Deployment
 

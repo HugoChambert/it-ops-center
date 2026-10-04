@@ -57,3 +57,14 @@
 - **`DEMO_RESET_HOURS`:** when set to a positive number, a `setInterval` in `server/index.js` deletes all rows from every table (in dependency order) and calls `seed(db)` on the given interval. When unset, nothing changes.
 - **`VITE_DEMO_BANNER`:** a build-time Vite env variable. When `"true"`, `Layout.jsx` renders an amber banner above the header: "Demo environment: data resets periodically". Absent or any other value → no banner, zero runtime cost.
 - **Tests:** `tests/deploy.test.js` — static file served (200), SPA fallback for unknown non-`/api` path (200 + `index.html`), JSON 404 preserved for unknown `/api` routes, no fallback without `staticDir`; three reset-logic tests exercising the wipe-then-reseed sequence against an in-memory db.
+
+## Phase 10: Reverse-proxy trust and rate-limiter correctness
+
+- **Problem:** Render runs the app behind one reverse proxy. Without `app.set('trust proxy', 1)`, Express ignores `X-Forwarded-For` and uses the proxy's IP as `req.ip`. All visitors share a single rate-limit bucket, making the rate limiter useless for abuse prevention and trivially triggerable by any one client.
+- **Fix:** `createApp` now calls `app.set('trust proxy', trustProxy)` before any middleware. The value is derived as follows:
+  1. If `TRUST_PROXY` env var is set, parse it: `'0'`/`'false'` → `false`; numeric string → number (hop count); other string (e.g. `'loopback'`) → passed as-is to Express.
+  2. Otherwise, default to `1` when `NODE_ENV === 'production'` and `false` in dev/test.
+- **Why 1, not `true`:** Express's `trust proxy = true` trusts *all* proxies in the chain, which allows a client to spoof `X-Forwarded-For` entirely. `trust proxy = 1` trusts exactly one hop — only the last proxy (the Render edge) is trusted; any client-supplied XFF entries further left are not promoted to `req.ip`.
+- **`TRUST_PROXY` override:** Useful for Docker deployments behind a different number of hops, or for local integration testing where a developer wants to simulate a proxied environment without setting `NODE_ENV=production`.
+- **Tests:** `tests/trust-proxy.test.js` — 6 tests across two describe blocks: (1) trust proxy ON: each distinct `X-Forwarded-For` address gets its own rate-limit bucket; client-B is unaffected when client-A exhausts its bucket. (2) trust proxy OFF: different XFF headers do not create separate buckets; plain and forwarded requests all deplete the same loopback-address bucket.
+- **CSP audit:** Audited the production Vite build against the existing `Content-Security-Policy`. The Systems page progress bars use React's `style={{ width: ... }}` prop (renders as an HTML `style` attribute), which is already covered by `style-src 'self' 'unsafe-inline'`. The Dashboard `<Trend>` component is inline SVG rendered by React DOM — no external resource fetch, no special CSP directive needed. No CSP changes required.

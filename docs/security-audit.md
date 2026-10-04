@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Date** | 2026-10-03 |
+| **Date** | 2026-10-03 (updated 2026-10-03) |
 | **Scope** | Full server and client source (`server/`, `src/`) |
 | **Standard** | OWASP Application Security Verification Standard 4.0 — Level 1 |
 | **Auditor** | Bob (AI-assisted code review) |
-| **Application code changed** | No |
+| **Application code changed** | Yes — SEC-010 fixed |
 
 ---
 
@@ -29,6 +29,7 @@ The IT Operations Center is an internal-facing single-page application without a
 | [SEC-007](#sec-007) | Medium | Input Validation | No maximum-length enforcement on free-text fields |
 | [SEC-008](#sec-008) | Low | Error Handling | Unexpected errors are logged but the log destination is stdout only — **Fixed 2026-10-03** |
 | [SEC-009](#sec-009) | Low | Secrets Handling | `.env.example` ships with an empty `AI_API_KEY` — no strength guidance |
+| [SEC-010](#sec-010) | Medium | Rate Limiting / Proxy | Express did not trust the reverse proxy — rate limiters shared one bucket for all clients — **Fixed 2026-10-03** |
 
 ---
 
@@ -239,6 +240,33 @@ Add an inline comment in `.env.example`:
 # Generate a dedicated key at platform.openai.com/api-keys. Never reuse keys across projects.
 AI_API_KEY=
 ```
+
+---
+
+### SEC-010
+
+**Severity:** Medium
+**Category:** V13 — Rate Limiting / Proxy Configuration
+**Status:** ✅ Fixed 2026-10-03 — `app.set('trust proxy', trustProxy)` added in [`server/app.js`](../server/app.js) before any middleware. Defaults to `1` (one-hop) when `NODE_ENV=production`, `false` otherwise. Overridable via `TRUST_PROXY` env var.
+**Evidence:** [`server/app.js`](../server/app.js) before this fix — `trust proxy` was never set, so Express defaulted to `false`, ignoring `X-Forwarded-For` and using the proxy's IP as `req.ip`.
+
+**Why it matters:**
+Render terminates TLS and routes traffic through one reverse proxy before the Node process. Without `trust proxy = 1`, `req.ip` is always the proxy's IP address (e.g. `10.0.0.100`) rather than the real client address. Every incoming request — from every user in the world — maps to the same key in the rate-limiter's store. Two consequences:
+- **Rate limiting is broken as an abuse defence:** a single attacker can exhaust the global 120-request-per-minute budget for all users simultaneously, DoSing the service.
+- **An individual attacker faces no per-IP limit:** they can fire requests at will without being throttled, because they share the proxy's bucket with everyone else.
+
+**Why `trust proxy = 1` and not `true`:**
+`trust proxy = true` instructs Express to trust *every* entry in the `X-Forwarded-For` chain, including client-supplied ones. A malicious client can then spoof any IP address (e.g. `X-Forwarded-For: 1.2.3.4`) and bypass rate limits entirely. `trust proxy = 1` trusts only the last (nearest) proxy — the Render edge node — and ignores anything the client wrote into the header.
+
+**Recommended fix:**
+```js
+// In createApp, before any middleware
+const trustProxy = process.env.TRUST_PROXY !== undefined
+  ? parseTrustProxy(process.env.TRUST_PROXY)
+  : process.env.NODE_ENV === 'production' ? 1 : false;
+app.set('trust proxy', trustProxy);
+```
+Where `parseTrustProxy` converts the string env var to the correct type (`'0'`/`'false'` → `false`; numeric string → number; other → string subnet name).
 
 ---
 
