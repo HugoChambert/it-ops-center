@@ -68,3 +68,9 @@
 - **`TRUST_PROXY` override:** Useful for Docker deployments behind a different number of hops, or for local integration testing where a developer wants to simulate a proxied environment without setting `NODE_ENV=production`.
 - **Tests:** `tests/trust-proxy.test.js` — 6 tests across two describe blocks: (1) trust proxy ON: each distinct `X-Forwarded-For` address gets its own rate-limit bucket; client-B is unaffected when client-A exhausts its bucket. (2) trust proxy OFF: different XFF headers do not create separate buckets; plain and forwarded requests all deplete the same loopback-address bucket.
 - **CSP audit:** Audited the production Vite build against the existing `Content-Security-Policy`. The Systems page progress bars use React's `style={{ width: ... }}` prop (renders as an HTML `style` attribute), which is already covered by `style-src 'self' 'unsafe-inline'`. The Dashboard `<Trend>` component is inline SVG rendered by React DOM — no external resource fetch, no special CSP directive needed. No CSP changes required.
+
+## CI
+
+- **Workflow:** `.github/workflows/ci.yml` runs on every push and pull request to `main`.
+- **Steps:** checkout → Node 22 setup (with npm cache) → `npm ci` → `npm test` → `npm run build`.
+- **Badge:** `README.md` displays the live workflow status badge linked to the Actions run history.

@@ -1,4 +1,7 @@
 # IT Operations Center
+
+[![CI](https://github.com/HugoChambert/it-ops-center/actions/workflows/ci.yml/badge.svg)](https://github.com/HugoChambert/it-ops-center/actions/workflows/ci.yml)
+
 Incident-management platform for IT support teams. Built for the IBM Bob hackathon (Explore → Fix → Build).
 
 **Live demo:** [https://it-ops-center.onrender.com/](https://it-ops-center.onrender.com/)

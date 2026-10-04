@@ -4,6 +4,16 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — GitHub Actions CI workflow
+
+**Asked:** Add a GitHub Actions workflow at `.github/workflows/ci.yml` that triggers on every push and pull request to `main`: checkout, set up Node 22, run `npm ci`, `npm test`, and `npm run build`. Add a status badge to `README.md`. Add a short CI section to `docs/architecture.md` and `docs/BOB_LOG.md`. No new dependencies.
+
+**Files created:** `.github/workflows/ci.yml`
+
+**Files modified:** `README.md` (status badge under the title), `docs/architecture.md` (CI section appended), `docs/BOB_LOG.md` (this entry)
+
+---
+
 ## 2026-10-03 — Reverse-proxy trust, rate-limiter correctness, CSP audit (SEC-010)
 
 **Asked:** Fix a production-only problem where Express was not trusting the Render reverse proxy, causing all rate limiters to treat every visitor as the same IP. Set `trust proxy` based on `NODE_ENV`/`TRUST_PROXY`. Add tests proving per-IP bucketing with XFF headers. Audit CSP against the production build. Update docs.
