@@ -4,6 +4,23 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — OWASP ASVS Level 1 Security Audit
+
+**Asked:** Create a reusable security-audit skill at `.bob/skills/security-audit/` (with `SKILL.md` and `checklist.md`), then run it against the project and write `docs/security-audit.md`. No application code to be changed.
+
+**Files read (audit evidence):** `server/app.js`, `server/index.js`, `server/db.js`, `server/services/incidents.js`, `server/services/articles.js`, `server/services/reports.js`, `server/services/settings.js`, `server/services/settingsStore.js`, `server/services/sla.js`, `server/ai/index.js`, `server/ai/mockProvider.js`, `src/api.js`, `package.json`, `.env.example`, `.gitignore`, `vite.config.js`.
+
+**Files created:**
+- `.bob/skills/security-audit/SKILL.md` — reusable skill with step-by-step ASVS Level 1 audit procedure.
+- `.bob/skills/security-audit/checklist.md` — supporting reference checklist covering all six ASVS categories.
+- `docs/security-audit.md` — full audit report: 9 findings (4 High, 3 Medium, 2 Low), positive findings, and priority-ordered remediation steps.
+
+**Application code changed:** None.
+
+**Verified:** `grep` searches confirmed no hard-coded secrets, no string-concatenated SQL, and no XSS sinks in any source file. All findings are grounded in specific file lines cited in the report.
+
+---
+
 ## 2026-10-03 — README live demo link
 
 **Asked:** Add a live demo link at the top of `README.md`, directly under the project title, pointing to `https://it-ops-center.onrender.com/`, with a note about free-tier cold-start and periodic data resets. Verify the Deployment section had no existing live link to deduplicate.
