@@ -66,5 +66,20 @@ The deadline is computed from `created_at + current priority window` at request 
 
 Resolved and Closed incidents return `"sla": null`. The dashboard exposes `overdueIncidents`. Changing priority shifts the deadline immediately — intentional, so a Critical re-triage surfaces overdue status straight away.
 
+## Known Limitations
+
+### Authentication
+This demo has **no authentication layer** — all API endpoints are publicly accessible to anyone who can reach the server. This is intentional for the demo deployment; the data resets periodically and contains no real personal information.
+
+A production version would need:
+- A login page (username + password with bcrypt hashing) or SSO via an identity provider (e.g. SAML, OIDC).
+- Session management (e.g. `express-session` + a secure cookie) or signed JWTs with short expiry.
+- Role-based access control separating read-only users from technicians and admins.
+- HTTPS enforcement with HSTS (already set in the security headers, but TLS termination must be configured at the host or reverse proxy).
+
+If you are deploying this for internal use rather than as a public demo, the simplest hardening step is to set an `API_TOKEN` environment variable and protect every `/api` route with a single bearer-token check, as documented in [`docs/security-audit.md`](docs/security-audit.md#sec-001).
+
+---
+
 ## Status
 Phase 1: shell and dashboard. Phase 2: incident create/view/search/filter/assign/prioritise/resolve, notes, troubleshooting actions, timeline. Phase 3: systems page. Phase 4: knowledge base. Phase 5: AI troubleshooting panel (mock provider). Phase 6: incident reports (editable draft, then save). Phase 7: settings. Phase 8: SLA deadlines and overdue tracking. All features in the original brief are built.

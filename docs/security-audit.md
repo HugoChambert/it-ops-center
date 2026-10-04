@@ -21,13 +21,13 @@ The IT Operations Center is an internal-facing single-page application without a
 | ID | Severity | Category | Description |
 |----|----------|----------|-------------|
 | [SEC-001](#sec-001) | High | Authentication & Access Control | No authentication — all API endpoints are publicly accessible |
-| [SEC-002](#sec-002) | High | Rate Limiting | No rate-limiter on any endpoint |
-| [SEC-003](#sec-003) | High | Rate Limiting | `express.json()` has no body-size limit |
-| [SEC-004](#sec-004) | High | Security Headers | No security headers (`Helmet` or equivalent) |
-| [SEC-005](#sec-005) | Medium | Rate Limiting | AI endpoints have no additional throttling |
-| [SEC-006](#sec-006) | Medium | Input Validation | Route `:id` parameters are not validated before use |
+| [SEC-002](#sec-002) | High | Rate Limiting | No rate-limiter on any endpoint — **Fixed 2026-10-03** |
+| [SEC-003](#sec-003) | High | Rate Limiting | `express.json()` has no body-size limit — **Fixed 2026-10-03** |
+| [SEC-004](#sec-004) | High | Security Headers | No security headers (`Helmet` or equivalent) — **Fixed 2026-10-03** |
+| [SEC-005](#sec-005) | Medium | Rate Limiting | AI endpoints have no additional throttling — **Fixed 2026-10-03** |
+| [SEC-006](#sec-006) | Medium | Input Validation | Route `:id` parameters are not validated before use — **Fixed 2026-10-03** |
 | [SEC-007](#sec-007) | Medium | Input Validation | No maximum-length enforcement on free-text fields |
-| [SEC-008](#sec-008) | Low | Error Handling | Unexpected errors are logged but the log destination is stdout only |
+| [SEC-008](#sec-008) | Low | Error Handling | Unexpected errors are logged but the log destination is stdout only — **Fixed 2026-10-03** |
 | [SEC-009](#sec-009) | Low | Secrets Handling | `.env.example` ships with an empty `AI_API_KEY` — no strength guidance |
 
 ---
@@ -38,8 +38,9 @@ The IT Operations Center is an internal-facing single-page application without a
 
 ### SEC-001
 
-**Severity:** High  
-**Category:** V4 — Authentication & Access Control  
+**Severity:** High
+**Category:** V4 — Authentication & Access Control
+**Status:** Open — intentionally deferred for the demo deployment. A "Known Limitations" section has been added to `README.md` documenting what a production version would require.
 **Evidence:** [`server/app.js` line 10–65](../server/app.js) — `createApp` registers every route with no authentication middleware.
 
 **Why it matters:**  
@@ -65,8 +66,9 @@ Set `API_TOKEN` in the environment. For multi-user deployments, use a proper ses
 
 ### SEC-002
 
-**Severity:** High  
-**Category:** V13 — Rate Limiting  
+**Severity:** High
+**Category:** V13 — Rate Limiting
+**Status:** ✅ Fixed 2026-10-03 — hand-rolled sliding-window rate limiter in [`server/middleware/security.js`](../server/middleware/security.js). Applied as `globalLimiter` (120 req/60 s/IP) to all `/api` routes. No new dependencies.
 **Evidence:** [`server/app.js` line 10–65](../server/app.js) — no rate-limiter middleware is imported or registered. The `package.json` ([`package.json` line 15](../package.json)) does not list `express-rate-limit`.
 
 **Why it matters:**  
@@ -88,8 +90,9 @@ Tune `max` to your expected concurrent user count. See SEC-005 for tighter limit
 
 ### SEC-003
 
-**Severity:** High  
-**Category:** V13 — Request Constraints  
+**Severity:** High
+**Category:** V13 — Request Constraints
+**Status:** ✅ Fixed 2026-10-03 — changed to `express.json({ limit: '64kb' })` in [`server/app.js` line 22](../server/app.js).
 **Evidence:** [`server/app.js` line 12](../server/app.js) — `app.use(express.json())` with no options.
 
 **Why it matters:**  
@@ -105,8 +108,9 @@ This is a one-character change to an existing line. `64kb` is generous for all l
 
 ### SEC-004
 
-**Severity:** High  
-**Category:** V14 — Security Headers  
+**Severity:** High
+**Category:** V14 — Security Headers
+**Status:** ✅ Fixed 2026-10-03 — `securityHeaders` middleware added in [`server/middleware/security.js`](../server/middleware/security.js) and applied as the first middleware in `createApp`. Sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy`, `Strict-Transport-Security`, and `X-Permitted-Cross-Domain-Policies`. No new dependencies.
 **Evidence:** [`server/app.js` lines 11–13](../server/app.js) — no `helmet()` or any header middleware is present. `package.json` ([`package.json` line 15](../package.json)) does not list `helmet`.
 
 **Why it matters:**  
@@ -135,8 +139,9 @@ Review the CSP defaults that `helmet` sets and adjust `contentSecurityPolicy` if
 
 ### SEC-005
 
-**Severity:** Medium  
-**Category:** V13 — Rate Limiting  
+**Severity:** Medium
+**Category:** V13 — Rate Limiting
+**Status:** ✅ Fixed 2026-10-03 — `aiLimiter` (10 req/60 s/IP) applied as route-level middleware on `POST .../troubleshoot` and `POST .../report/draft` in [`server/app.js`](../server/app.js).
 **Evidence:** [`server/app.js` lines 25–32](../server/app.js) and lines 35–37 — `POST /api/incidents/:id/troubleshoot` and `POST /api/incidents/:id/report/draft` call `ai.troubleshoot()` and `ai.draftReport()` with no per-endpoint throttle.
 
 **Why it matters:**  
@@ -154,8 +159,9 @@ app.post('/api/incidents/:id/report/draft', aiLimiter, async (req, res, next) =>
 
 ### SEC-006
 
-**Severity:** Medium  
-**Category:** V5 — Input Validation  
+**Severity:** Medium
+**Category:** V5 — Input Validation
+**Status:** ✅ Fixed 2026-10-03 — `parseId(raw)` helper added in [`server/app.js`](../server/app.js); throws `HttpError(400, 'Invalid ID')` for non-positive-integers. All `:id` routes now use `parseId` instead of `Number`.
 **Evidence:** [`server/app.js` lines 20–23, 27, 34, 36, 38, 50](../server/app.js) — every `:id` route passes `Number(req.params.id)` directly to service functions. `Number('abc')` returns `NaN`; `Number('')` returns `0`; `Number(-1)` returns `-1`. None of these are guarded at the route layer.
 
 **Why it matters:**  
@@ -196,8 +202,9 @@ Apply analogous checks to all long-form fields. These limits are generous relati
 
 ### SEC-008
 
-**Severity:** Low  
-**Category:** V7 — Error Handling & Logging  
+**Severity:** Low
+**Category:** V7 — Error Handling & Logging
+**Status:** ✅ Fixed 2026-10-03 — error handler in [`server/app.js`](../server/app.js) now logs `[METHOD /path]` as the first argument to `console.error`, making log lines searchable by endpoint.
 **Evidence:** [`server/app.js` line 61](../server/app.js) — `console.error(err)` is the only error logging; [`server/index.js` lines 14–16](../server/index.js) — stdout only, no structured logging.
 
 **Why it matters:**  

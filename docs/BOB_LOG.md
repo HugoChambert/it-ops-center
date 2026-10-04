@@ -4,6 +4,31 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — Security hardening: fix SEC-002, SEC-003, SEC-004, SEC-005, SEC-006, SEC-008
+
+**Asked:** Fix the three to five highest-severity OWASP ASVS findings from `docs/security-audit.md` that are low-risk to fix, with no new npm dependencies. Add tests for each fix. Add a "Known Limitations" section to README for SEC-001 (authentication). Do not change existing tests.
+
+**Fixes applied:**
+
+- **SEC-003** — `express.json({ limit: '64kb' })` in `server/app.js` line 22. Caps request body at 64 KB; Express returns 413 for oversized bodies automatically.
+- **SEC-004** — `server/middleware/security.js` *(new)* — `securityHeaders` middleware sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy` (with `frame-ancestors 'none'`), `Strict-Transport-Security`, and `X-Permitted-Cross-Domain-Policies`. Applied as the first middleware in `createApp`. Zero dependencies.
+- **SEC-002** — `createRateLimiter({ windowMs, max })` in `server/middleware/security.js` — sliding-window in-process rate limiter backed by a `Map`. `globalLimiter` (120 req/60 s/IP) applied to all `/api` routes. Sets `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `Retry-After` headers. Returns 429 when exceeded.
+- **SEC-005** — `aiLimiter` (10 req/60 s/IP) from the same module applied as route-level middleware on `POST /api/incidents/:id/troubleshoot` and `POST /api/incidents/:id/report/draft`.
+- **SEC-006** — `parseId(raw)` helper in `server/app.js` throws `HttpError(400, 'Invalid ID')` for any `:id` that is not a positive integer. All nine `:id` route handlers updated.
+- **SEC-008** — Error handler in `server/app.js` changed from `console.error(err)` to `console.error(\`[${req.method} ${req.path}]\`, err)`.
+
+**SEC-001 (auth)** — deferred per instructions. "Known Limitations" section added to `README.md` explaining the intentional public demo and what a production deployment would require.
+
+**Files created:** `server/middleware/security.js`, `tests/security.test.js`
+
+**Files modified:** `server/app.js`, `README.md`, `docs/security-audit.md`, `docs/BOB_LOG.md`
+
+**No existing tests edited.**
+
+**Verified:** `npm test` — 78 tests, 10 files, all passed. `npm run build` — 49 modules, no warnings, built in 1.35s.
+
+---
+
 ## 2026-10-03 — OWASP ASVS Level 1 Security Audit
 
 **Asked:** Create a reusable security-audit skill at `.bob/skills/security-audit/` (with `SKILL.md` and `checklist.md`), then run it against the project and write `docs/security-audit.md`. No application code to be changed.
