@@ -6,3 +6,52 @@
 }
 body { @apply bg-paper text-ink font-sans antialiased; }
 :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+
+/* -------------------------------------------------------------------------
+   Page background — subtle cool-to-paper gradient that gives the glass
+   surfaces something to blur against. Stays well within the paper hue;
+   the darkest stop (#eaecf0) has luminance ≈ 0.847, so white/80 glass
+   blends to ≈ #fafafa — ink (#1c2733) contrast ≈ 14:1 ✅ WCAG AA.
+   ------------------------------------------------------------------------- */
+.bg-gradient-page {
+  background: radial-gradient(ellipse 120% 80% at 60% 0%, #e6eaf2 0%, #f4f5f7 55%, #f0f2f5 100%);
+}
+
+/* -------------------------------------------------------------------------
+   Glassmorphism utilities
+   - .glass-card  : white/80 + blur-sm — for stat cards
+   - .glass-panel : white/70 + blur-sm — for AI panel header strip
+   Both keep a solid bg fallback for @supports and reduced-transparency.
+   ------------------------------------------------------------------------- */
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .glass-card {
+    background-color: rgba(255, 255, 255, 0.80);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+.glass-header {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .glass-header {
+    background-color: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Accessibility: honour prefers-reduced-transparency by removing all blur
+   and forcing fully opaque backgrounds.
+   ------------------------------------------------------------------------- */
+@media (prefers-reduced-transparency: reduce) {
+  .bg-gradient-page { background: var(--color-paper); }
+  .glass-card  { background-color: #ffffff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .glass-header { background-color: #ffffff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}

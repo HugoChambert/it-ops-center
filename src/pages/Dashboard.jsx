@@ -47,7 +47,7 @@ const ICONS = {
 
 function Stat({ label, value, tone, icon }) {
   return (
-    <div className="rounded-lg border border-line bg-white p-4">
+    <div className="glass-card rounded-lg border border-line p-4">
       <div className={`flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide ${tone || 'text-slate-500'}`}>
         {icon}
         {label}

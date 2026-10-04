@@ -11,12 +11,14 @@ export default function AiPanel({ incidentId, onRecord }) {
   };
   const copy = async (c) => { try { await navigator.clipboard.writeText(c); setNote('Copied to clipboard'); } catch { setNote('Copy failed. Select the command and copy it manually.'); } };
   return (
-    <section className="space-y-3 rounded-lg border border-line bg-white p-4" aria-label="AI troubleshooting">
-      <div className="flex items-center justify-between gap-3">
+    <section className="rounded-lg border border-line bg-white overflow-hidden" aria-label="AI troubleshooting">
+      {/* Glass header strip — only this row gets the glass treatment */}
+      <div className="glass-card flex items-center justify-between gap-3 border-b border-line px-4 py-3">
         <h2 className="font-semibold">AI troubleshooting</h2>
         <button onClick={load} disabled={busy} className="rounded border border-brand px-3 py-2 text-sm font-medium text-brand disabled:opacity-50">
           {busy ? 'Analysing…' : s ? 'Refresh suggestions' : 'Get suggestions'}</button>
       </div>
+      <div className="space-y-3 p-4">
       {err && <p role="alert" className="text-sm text-crit">{err}</p>}
       {!s && !err && <p className="text-sm text-slate-600">Get recommended checks and commands based on this incident's title and description.</p>}
       {s && (<div className="space-y-4 text-sm">
@@ -36,6 +38,7 @@ export default function AiPanel({ incidentId, onRecord }) {
         {s.relatedArticles.length > 0 && <div><h3 className="font-medium">Related articles</h3>
           <ul>{s.relatedArticles.map((a) => <li key={a.id}><Link className="text-brand underline" to={`/knowledge/${a.id}`}>{a.title}</Link></li>)}</ul></div>}
       </div>)}
+      </div>
     </section>
   );
 }

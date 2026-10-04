@@ -4,6 +4,39 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — Visual polish: Stage 1 (dashboard, navigation, favicon)
+
+**Asked:** Visual polish pass, Stage 1. No API changes, no new dependencies, no inline style attributes (except SVG presentation attributes which are CSP-safe), no existing tests edited.
+
+**Changes:**
+
+- **`index.html`** — Added SVG favicon as a `data:` URI `<link rel="icon">`. Design: dark `#172230` rounded square with a 2×2 grid of blue squares (a small monitoring/dashboard motif). `img-src 'self' data:` is already in the CSP so this is safe.
+
+- **`src/components/Layout.jsx`** — Complete rewrite of the nav and header:
+  - `LogoMark` component: a 20×20 inline SVG (2×2 grid of rounded rectangles using `currentColor`) placed beside the app name. The bottom-right cell has two stacked bars as a subtle activity indicator.
+  - `Icon` component: a reusable wrapper for stroke-based SVG icons — `aria-hidden`, `focusable="false"`, `currentColor` stroke so they inherit the link's text colour.
+  - Six nav items each have a distinct icon (house, clock, server, book, line-chart, gear).
+  - Inactive links are `text-slate-300` → `hover:text-white` instead of the previous flat `hover:bg-white/10`, giving better contrast and a cleaner hover state.
+  - `transition-colors` added for smooth hover transitions.
+  - Skip-to-content link gains `focus:z-50` and `focus:text-brand` for better visibility.
+
+- **`src/pages/Dashboard.jsx`** — Three improvements:
+  1. **Stat cards:** each card now has an `icon` prop with a dedicated inline SVG (clock, triangle/alert, struck-through clock, check-circle, server, line-chart). Label is `text-xs uppercase tracking-wide` for visual hierarchy; value is `text-3xl font-semibold tabular-nums`. Icon and label share the same `tone` colour so Critical/Overdue cards are fully red, Resolved Today is green.
+  2. **Trend chart:** viewBox expanded to `500×160` (wider, taller). Added horizontal grid lines with y-axis value labels; per-point value dots (3 px radius) and value labels above each dot (suppressed when 0 to avoid clutter); x-axis date labels (`MM-DD`) for all 7 days; legend with mini SVG line swatches. Grid max rounds up to nearest even number for clean ticks.
+  3. **Data table:** a compact `text-xs` table below the chart showing the raw Created/Resolved values for each day — the screen-reader and keyboard source of truth.
+  4. Recent incidents table: title column now links to the incident detail page. Heading colours changed from `text-slate-600` to `text-slate-500` for better hierarchy.
+  5. All SVG colours use `var(--color-brand)`, `var(--color-ok)`, `var(--color-line)` — no hard-coded hex anywhere.
+
+- **`src/pages/Performance.jsx`** — Replaced the 4 hard-coded hex values in the SVG trend chart (`#1f5fbf`, `#1b6b3a`, `#dde1e7`, `#57606a`) with `var(--color-brand)`, `var(--color-ok)`, `var(--color-line)`.
+
+**Files modified:** `index.html`, `src/components/Layout.jsx`, `src/pages/Dashboard.jsx`, `src/pages/Performance.jsx`, `docs/BOB_LOG.md`
+
+**No existing tests edited. No new dependencies.**
+
+**Verified:** `npm test` — 142 tests, 13 files, all passed. `npm run build` — 50 modules, no warnings, built in 839ms. Committed as `d8e192e`.
+
+---
+
 ## 2026-10-03 — Analytics: Stage 2 (frontend, seed data, docs)
 
 **Asked:** Implement Stage 2 of the Performance analytics feature: `src/pages/Performance.jsx`, seed data additions (IDs 7–16), and `docs/architecture.md`. No changes to README or existing tests.
