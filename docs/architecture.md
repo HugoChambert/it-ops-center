@@ -74,3 +74,14 @@
 - **Workflow:** `.github/workflows/ci.yml` runs on every push and pull request to `main`.
 - **Steps:** checkout → Node 22 setup (with npm cache) → `npm ci` → `npm test` → `npm run build`.
 - **Badge:** `README.md` displays the live workflow status badge linked to the Actions run history.
+
+## Performance analytics (Phase 11)
+
+- **Endpoint:** `GET /api/analytics` — covered by the existing `globalLimiter`; no auth or additional rate limit needed.
+- **Service:** `server/services/analytics.js` exports a single pure function `getAnalytics(db, now?)`. `now` is injectable for deterministic tests (same pattern as `getSlaStatus`).
+- **MTTR:** mean of `(resolved_at − created_at)` in ms across all `Resolved`/`Closed` incidents with a non-null `resolved_at`, grouped by priority. Zero-data buckets return `{ count: 0, mttrMs: null, mttrHuman: "No data" }`.
+- **SLA compliance:** uses `SLA_WINDOWS_MS` from `server/config/sla.js` — never duplicated. An incident is within SLA when `(resolved_at − created_at) ≤ window` (boundary inclusive). Returns `{ resolved, withinSla, rate }` per priority and `overall`; `rate` is `null` when `resolved === 0`.
+- **7-day trend:** UTC-day buckets. Each entry: `{ date, count, mttrMs, complianceRate }`. Empty days use `null` (never `NaN`) for both metrics.
+- **Empty sentinel:** when `rows.length === 0`, the result includes `{ empty: true, message: "No resolved incidents yet." }` in addition to all structural keys (`mttrByPriority`, `complianceByPriority`, `trend`). The frontend checks `data.empty` before rendering charts/tables.
+- **Frontend:** `src/pages/Performance.jsx` — a dedicated page at `/performance` (separate from the dashboard to avoid overloading it). Contains three `<section>` cards: MTTR table, SLA compliance table, and a dual-line SVG trend chart with an accompanying data table. The SVG is decorative (`role="img"` + `aria-label`); the data table beneath it is the accessible source of truth for keyboard and screen-reader users. No inline `style` attributes — all Tailwind classes. `overflow-x-auto` on all table wrappers for phone layout. Nav entry "Performance" added between "Knowledge base" and "Settings".
+- **Seed data:** INC-7–16 appended in `seed()` — all Resolved/Closed, `resolved_at` ≥ 32 h ago (outside today's UTC boundary so `resolvedToday` tests are unaffected), no "VPN" in title or description, no new systems. Mix of within-SLA and outside-SLA resolutions across Critical/High/Medium/Low priorities, spread over multiple days so the 7-day trend shows non-trivial data in the demo.

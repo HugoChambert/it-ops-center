@@ -73,5 +73,36 @@ export function seed(db) {
    ['Web certificate expiring','Certificate expires in 7 days.','High','Resolved','Dana Wu',null,1,40,3,3],
    ['Password reset loop','Reset link returns to login.','Medium','Closed','Dana Wu','R. Patel',2,90,60,60]]
     .forEach(([t,d,p,s,a,u,sid,c,up,r]) => inc.run(t,d,p,s,a,u,sid,ago(c),ago(up),r == null ? null : ago(r)));
+
+  // INC-7..16: resolved incidents spread over the last 7 days for analytics demo.
+  // Rules: all Resolved/Closed, resolved_at ≥ 25h ago (outside today → "resolvedToday" tests safe),
+  //        no "VPN" in title/description, no Open/Critical+Open rows, no new systems.
+  // Format: [title, description, priority, status, created_h_ago, resolved_h_ago, resolution]
+  // Resolution time = created_h_ago - resolved_h_ago. SLA windows: Critical 1h, High 4h, Medium 8h, Low 24h.
+  const incR = db.prepare(`INSERT INTO incidents (title,description,priority,status,assignee,affected_user,system_id,created_at,updated_at,resolved_at,resolution)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)`);
+  [
+    // INC-7:  High,     created 50h ago, resolved 46h ago → 4h exactly → within SLA (High 4h) ✓
+    ['Print server queue stuck',       'Jobs queued but not printing.',              'High',     'Resolved', 'Hugo Chambert', null, 1, 50, 46, 'Restarted print spooler service.'],
+    // INC-8:  Medium,   created 50h ago, resolved 43h ago → 7h → within SLA (Medium 8h) ✓
+    ['File sync errors on workstation', 'User reports files not syncing to share.',   'Medium',   'Resolved', 'Sam Okafor',    null, 4, 50, 43, 'Re-mapped network drive and cleared cache.'],
+    // INC-9:  Low,      created 55h ago, resolved 32h ago → 23h → within SLA (Low 24h) ✓
+    ['Monitor flickering intermittently','Display flickers under load.',              'Low',      'Resolved', 'Dana Wu',       null, 1, 55, 32, 'Replaced DisplayPort cable.'],
+    // INC-10: High,     created 75h ago, resolved 68h ago → 7h → outside SLA (High 4h) ✗
+    ['Email attachment blocked',        'Large attachments rejected by mail relay.',  'High',     'Resolved', 'Hugo Chambert', null, 5, 75, 68, 'Raised attachment size limit on mail relay.'],
+    // INC-11: Medium,   created 75h ago, resolved 63h ago → 12h → outside SLA (Medium 8h) ✗
+    ['Disk quota alert on file server',  'USER quota at 95%, writes failing.',        'Medium',   'Resolved', 'Sam Okafor',    null, 4, 75, 63, 'Archived old project folders and extended quota.'],
+    // INC-12: Critical, created 100h ago, resolved 99h ago → 1h exactly → within SLA (Critical 1h) ✓
+    ['Database service crashed',        'Primary DB process exited unexpectedly.',    'Critical', 'Resolved', 'Dana Wu',       null, 3, 100, 99, 'Restarted DB service; root cause: OOM.'],
+    // INC-13: Critical, created 120h ago, resolved 116h ago → 4h → outside SLA (Critical 1h) ✗
+    ['Authentication service down',     'Login requests returning 503.',             'Critical', 'Closed',   'Hugo Chambert', null, 2, 120, 116, 'Redeployed auth service pod; investigated OOM.'],
+    // INC-14: Low,      created 120h ago, resolved 99h ago → 21h → within SLA (Low 24h) ✓
+    ['Keyboard not recognised on boot', 'USB keyboard undetected after reboot.',      'Low',      'Resolved', 'Sam Okafor',    null, 1, 120, 99, 'Updated USB controller firmware.'],
+    // INC-15: High,     created 145h ago, resolved 140h ago → 5h → outside SLA (High 4h) ✗
+    ['Software licence expired',        'Application reports licence invalid.',       'High',     'Resolved', 'Dana Wu',       null, 2, 145, 140, 'Renewed annual licence and restarted application.'],
+    // INC-16: Medium,   created 145h ago, resolved 138h ago → 7h → within SLA (Medium 8h) ✓
+    ['Browser crashes on intranet site','Crash occurs on specific internal page.',    'Medium',   'Closed',   'Hugo Chambert', null, 1, 145, 138, 'Cleared browser profile; updated to latest version.'],
+  ].forEach(([t,d,p,s,a,u,sid,c,r,res]) => incR.run(t,d,p,s,a,u,sid,ago(c),ago(r),ago(r),res));
+
   seedArticles(db);
 }

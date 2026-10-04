@@ -4,6 +4,76 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — Analytics: Stage 2 (frontend, seed data, docs)
+
+**Asked:** Implement Stage 2 of the Performance analytics feature: `src/pages/Performance.jsx`, seed data additions (IDs 7–16), and `docs/architecture.md`. No changes to README or existing tests.
+
+**Seed data (`server/db.js`):** 10 new rows (IDs 7–16) appended after the original 6. All Resolved or Closed. `resolved_at` is 32–140 h ago — clear of today's UTC boundary so the `resolvedToday + 1` test is unaffected. No "VPN" in any title or description. No new systems. Mix of within-SLA and outside-SLA resolutions across all four priorities, spread over multiple UTC days so the 7-day trend has non-trivial data.
+
+**Frontend (`src/pages/Performance.jsx`):** New page at `/performance`.
+- Three `<section>` cards: **MTTR table** (priority + count + mean time), **SLA compliance table** (priority + SLA window + resolved + within SLA + rate), **7-day trend** (dual-line SVG chart + data table).
+- SVG chart uses the same `viewBox`/path approach as the existing Dashboard `<Trend>`. Solid blue = MTTR (hours), dashed green = compliance %. `role="img"` + `aria-label` on the SVG; the data table beneath is the screen-reader and keyboard source of truth.
+- Empty state: when `data.empty === true`, renders only the message text — no empty charts or tables.
+- No inline `style` attributes — all Tailwind classes. `overflow-x-auto` on all table wrappers for phone layout.
+
+**Nav + routing:** "Performance" nav entry added between "Knowledge base" and "Settings" in `src/components/Layout.jsx`; `/performance` route registered in `src/App.jsx`.
+
+**Files created:** `src/pages/Performance.jsx`
+
+**Files modified:** `server/db.js` (10 new seed rows), `src/App.jsx` (route), `src/components/Layout.jsx` (nav entry), `docs/architecture.md` (Phase 11 section), `docs/BOB_LOG.md`
+
+**No existing tests edited.**
+
+**Verified:** `npm test` — 142 tests, 13 files, all passed. `npm run build` — 50 modules, no warnings, built in 770ms.
+
+---
+
+## 2026-10-03 — Analytics: Stage 1 (backend + tests)
+
+**Asked:** Implement Stage 1 of the "Performance" analytics feature: `server/services/analytics.js`, `GET /api/analytics`, and tests with exact expected values. No frontend, no seed changes, no existing tests edited.
+
+**Service (`server/services/analytics.js`):** Pure `getAnalytics(db, now?)` function — `now` is injectable for deterministic tests.
+- **MTTR by priority:** mean of `(resolved_at − created_at)` for all resolved/closed incidents with `resolved_at` set. Returns `{ count, mttrMs, mttrHuman }` per priority and an `overall` bucket. Zero-data priorities return `{ count: 0, mttrMs: null, mttrHuman: "No data" }`.
+- **SLA compliance:** uses `SLA_WINDOWS_MS` from `server/config/sla.js` (never duplicated). An incident is within SLA when `(resolved_at − created_at) ≤ SLA_WINDOWS_MS[priority]`, boundary inclusive. Returns `{ resolved, withinSla, rate }` per priority and `overall`; `rate` is `Math.round(withinSla / resolved * 100)` or `null` when `resolved === 0`.
+- **7-day trend:** UTC-day buckets for the past 7 days. Each entry: `{ date, count, mttrMs, complianceRate }`. Empty days have `mttrMs: null` and `complianceRate: null` (never `NaN`).
+- **Empty case:** when no resolved rows exist, the result includes `{ empty: true, message: "No resolved incidents yet." }` alongside all structural keys (so callers can always iterate `trend`, etc.).
+
+**Endpoint:** `GET /api/analytics` registered in `server/app.js`. Covered by the existing `globalLimiter`. No `parseId` needed — no path parameter.
+
+**Design note on empty sentinel:** originally returned early with `{ empty: true, message }` and no other keys. Changed to always compute full structure and attach `empty`/`message` as additional flags when `rows.length === 0`, so the trend tests (which iterate `result.trend`) and the structural tests (which access `complianceByPriority.overall`) work even on an empty DB. This is consistent with the frontend being able to always read the structure safely.
+
+**Files created:** `server/services/analytics.js`, `tests/analytics.test.js`
+
+**Files modified:** `server/app.js` (import + one route), `docs/BOB_LOG.md`
+
+**No existing tests edited.**
+
+**Verified:** `npm test` — 142 tests, 13 files, all passed.
+
+---
+
+## 2026-10-03 — Similar incidents: Stage 1 (backend + tests)
+
+**Asked:** Implement Stage 1 of the "Similar incidents" feature: `server/services/similar.js`, the `GET /api/incidents/:id/similar` endpoint, and tests. No frontend, no seed changes, no existing tests edited.
+
+**Algorithm (`server/services/similar.js`):** Weighted shared-keyword scoring — pure JS, zero new dependencies.
+- `tokenise(text)` → `Set<string>`: lowercase, split on non-alphanumeric, drop ≤2-char tokens and stop words (~50 common English + domain words).
+- `scorePair(qTokens, title, body, extra)` → `{ score, matchedWords }`: title match = weight 2, body match = weight 1. `matchedWords` is sorted alphabetically, capped at 8.
+- `getSimilar(db, incident)`: queries `incidents WHERE status IN ('Resolved','Closed') AND id != ?` and all `articles`; scores each; drops score=0; returns top 3 per category sorted descending.
+- Return shape: `{ disclaimer, incidents: [...], articles: [...] }`. Both arrays are always present (never `null`).
+
+**Endpoint:** `GET /api/incidents/:id/similar` registered in `server/app.js`. Uses existing `parseId` (400 on bad ID) and `inc.getIncident` (404 guard). Covered by the existing `globalLimiter` on all `/api` routes.
+
+**Files created:** `server/services/similar.js`, `tests/similar.test.js`
+
+**Files modified:** `server/app.js` (import + one route), `docs/BOB_LOG.md`
+
+**No existing tests edited.**
+
+**Verified:** `npm test` — 110 tests, 12 files, all passed.
+
+---
+
 ## 2026-10-03 — GitHub Actions CI workflow
 
 **Asked:** Add a GitHub Actions workflow at `.github/workflows/ci.yml` that triggers on every push and pull request to `main`: checkout, set up Node 22, run `npm ci`, `npm test`, and `npm run build`. Add a status badge to `README.md`. Add a short CI section to `docs/architecture.md` and `docs/BOB_LOG.md`. No new dependencies.

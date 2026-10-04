@@ -8,6 +8,7 @@ import Knowledge from './pages/Knowledge.jsx';
 import ArticleView from './pages/ArticleView.jsx';
 import ArticleForm from './pages/ArticleForm.jsx';
 import Settings from './pages/Settings.jsx';
+import Performance from './pages/Performance.jsx';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="knowledge" element={<Knowledge />} />
         <Route path="knowledge/new" element={<ArticleForm />} />
         <Route path="knowledge/:id" element={<ArticleView />} />
+        <Route path="performance" element={<Performance />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

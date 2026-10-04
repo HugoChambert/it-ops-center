@@ -8,6 +8,8 @@ import * as settings from './services/settings.js';
 import * as reports from './services/reports.js';
 import { getProvider } from './ai/index.js';
 import { securityHeaders, globalLimiter, aiLimiter } from './middleware/security.js';
+import { getSimilar } from './services/similar.js';
+import { getAnalytics } from './services/analytics.js';
 
 // SEC-006: reject non-positive-integer :id params early, before hitting services
 function parseId(raw) {
@@ -40,6 +42,7 @@ export function createApp(db, { ai = getProvider(), staticDir = null } = {}) {
   app.use(express.json({ limit: '64kb' }));    // SEC-003: body-size cap
   app.use('/api', globalLimiter);             // SEC-002: global rate limit
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  app.get('/api/analytics', (_req, res) => res.json(getAnalytics(db)));
   app.get('/api/dashboard', (_req, res) => res.json(getDashboardStats(db)));
   app.get('/api/systems', (_req, res) => res.json(db.prepare(`SELECT s.*, (SELECT COUNT(*) FROM incidents i WHERE i.system_id = s.id
     AND i.status IN ('Open','Investigating','Pending')) AS open_incidents FROM systems s ORDER BY s.name`).all()));
@@ -58,6 +61,11 @@ export function createApp(db, { ai = getProvider(), staticDir = null } = {}) {
     const articles = s.articleQuery ? kb.listArticles(db, { q: s.articleQuery }).map(({ id, title }) => ({ id, title })) : [];
     res.json({ ...s, relatedArticles: articles });
     } catch (e) { next(e); }
+  });
+
+  app.get('/api/incidents/:id/similar', (req, res) => {
+    const incident = inc.getIncident(db, parseId(req.params.id));
+    res.json(getSimilar(db, incident));
   });
 
   app.get('/api/incidents/:id/report', (req, res) => res.json(reports.getReport(db, parseId(req.params.id))));
