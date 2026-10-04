@@ -1,6 +1,9 @@
 # IT Operations Center
 Incident-management platform for IT support teams. Built for the IBM Bob hackathon (Explore → Fix → Build).
 
+**Live demo:** [https://it-ops-center.onrender.com/](https://it-ops-center.onrender.com/)
+> Hosted on a free tier, so the first load after a quiet period may take about a minute to wake up. Demo data resets periodically.
+
 **Stack:** React + Vite + Tailwind (frontend), Express + SQLite via Node's built-in `node:sqlite` (backend), Vitest + Supertest.
 Requires Node 22.5+.
 

@@ -4,6 +4,17 @@ A factual record of tasks completed with Bob.
 
 ---
 
+## 2026-10-03 — README live demo link
+
+**Asked:** Add a live demo link at the top of `README.md`, directly under the project title, pointing to `https://it-ops-center.onrender.com/`, with a note about free-tier cold-start and periodic data resets. Verify the Deployment section had no existing live link to deduplicate.
+
+**Changes:**
+- `README.md` — inserted a `**Live demo:**` line and a blockquote note on lines 4–5, immediately after the project description line. No other content changed.
+
+**Verified:** No other files modified. Deployment section confirmed to have no prior live link; no duplication introduced.
+
+---
+
 ## 2026-10-03 — Production deployment (Phase 9)
 
 **Asked:** Make the app deployable as a single web service for Render/Docker, with a demo-reset interval, a build-time demo banner, static-file serving with SPA fallback, and full test coverage for the new behaviour.
